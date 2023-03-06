@@ -1,15 +1,32 @@
 from picographics import PicoGraphics, DISPLAY_TUFTY_2040
 from machine import ADC, Pin
 from time import sleep
+import time
 import qrcode
-import json
 
 from pimoroni import Button
+from pimoroni_i2c import PimoroniI2C
+from breakout_sgp30 import BreakoutSGP30
 
 # Configure Light Sensor
 lux_pwr = Pin(27, Pin.OUT)
 lux_pwr.value(1)
 lux = ADC(26)
+
+# Configure CO2 Sensor
+PINS_BREAKOUT_GARDEN = {
+    "sda": 4,
+    "scl": 5,
+    } # i2c pins 4, 5  for breakout garden
+PINS_PICO_EXPLORER = {
+    "sda": 20,
+    "scl": 21,
+    } # i2c pins for pico explorer
+
+i2c = PimoroniI2C(**PINS_BREAKOUT_GARDEN)
+sgp30 = BreakoutSGP30(i2c)
+        
+sgp30.start_measurement(False)
 
 # Configure Display
 display = PicoGraphics(display=DISPLAY_TUFTY_2040)
@@ -143,6 +160,10 @@ while True:
 
             # Disable the onboard voltage reference
             vref_en.value(0)
+            
+            # Get air quality reading
+            air_quality = sgp30.get_air_quality()
+            
             if button_boot.is_pressed:
                 if id_badge_config['bg_color'] == 1:
                     id_badge_config['bg_color'] = 2
@@ -214,6 +235,12 @@ while True:
                 text = f"{round(vbat, 2)}v"
             text_width = display.measure_text(text, .6, 0)
             display.text(text, (WIDTH // 3) + (text_width // 2), HEIGHT - 15, scale=.6)
+            
+            print(air_quality[BreakoutSGP30.ECO2])
+            text = f"{str(air_quality[BreakoutSGP30.ECO2])}ppm"
+            text_width = display.measure_text(text, .6, 0)
+            display.text(text, ((WIDTH // 3) * 2 - 20) + (text_width // 2), HEIGHT - 15, scale=.6)
+            
             display.update()
         
         if mode == 1:
