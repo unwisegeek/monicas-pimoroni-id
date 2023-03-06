@@ -75,10 +75,11 @@ def draw_qr_code(ox, oy, size, code):
                 display.rectangle(ox + x * module_size, oy + y * module_size, module_size, module_size)
 
 # State Handler - Lol
-state = 0
-mode = 0     # 0 - ID Card, 1 - Light Sensor, 2 - Coming Soon
+state = 0 # 0 - ID Card, 1 - Light Sensor, 2 - Coming Soon
+mode = 0  # Individual modes for each state, dictated by up and down arrows    
 selection = -1
 boot_press_count = 0
+modes = [[0, 1], [0]]
 
 counter_data = []
 counter_keys = [
@@ -112,97 +113,126 @@ voting_config = {
 while True:
     if button_a.is_pressed:
         state = 0
+        mode = 0
     if button_b.is_pressed:
         state = 1
+        mode = 0
     if button_c.is_pressed:
         state = 2
+        mode = 0
         
+    if button_down.is_pressed:
+        print("Button push detected")
+        if mode > 0:
+            mode -= 1
+        elif mode == 0:
+            mode = modes[state][-1]
+    if button_up.is_pressed:
+        if mode < modes[state][len(modes[state]) - 1]:
+            mode += 1
+        elif mode == modes[state][len(modes[state]) - 1]:
+            mode = 0
+    
     if state == 0:
-        vref_en.value(1)
-        # Calculate the logic supply voltage, as will be lower that the usual 3.3V when running off low batteries
-        vdd = 1.24 * (65535 / vref_adc.read_u16())
-        vbat = (
-            (vbat_adc.read_u16() / 65535) * 3 * vdd
-        )  # 3 in this is a gain, not rounding of 3.3V
+        if mode == 0:
+            vref_en.value(1)
+            # Calculate the logic supply voltage, as will be lower that the usual 3.3V when running off low batteries
+            vdd = 1.24 * (65535 / vref_adc.read_u16())
+            vbat = (
+                (vbat_adc.read_u16() / 65535) * 3 * vdd
+            )  # 3 in this is a gain, not rounding of 3.3V
 
-        # Disable the onboard voltage reference
-        vref_en.value(0)
-        if button_boot.is_pressed:
-            if id_badge_config['bg_color'] == 1:
-                id_badge_config['bg_color'] = 2
+            # Disable the onboard voltage reference
+            vref_en.value(0)
+            if button_boot.is_pressed:
+                if id_badge_config['bg_color'] == 1:
+                    id_badge_config['bg_color'] = 2
+                else:
+                    id_badge_config['bg_color'] = 1
+            display.set_font(id_badge_config['font'])
+            display.set_pen(UBUNTU_PURPLE if id_badge_config['bg_color'] == 1 else CHELSEA_CUCUMBER_GREEN)
+            display.clear()
+            
+            # Border
+            display.set_pen(id_badge_config['line_color'])
+            display.line(0, 0, WIDTH, 0) # Top
+            display.line(0, 0, 0, HEIGHT) # Left
+            display.line(WIDTH - 1, 0, WIDTH - 1, HEIGHT - 1) # Right
+            display.line(0, HEIGHT - 1, WIDTH - 1, HEIGHT - 1) # Bottom
+            
+            # Name Square
+            display.line(0, HEIGHT // 10 * 3 + 1, WIDTH, HEIGHT // 10 * 3 + 1)
+            
+            # Connect/QR Border
+            display.line(WIDTH // 2, HEIGHT // 10 * 3 + 1, WIDTH // 2, HEIGHT - 30)
+            
+            # Stats Border
+            display.line(0, HEIGHT - 30, WIDTH - 1, HEIGHT - 30)
+            display.line(WIDTH // 3, HEIGHT - 30, WIDTH // 3, HEIGHT - 1)
+            display.line(WIDTH // 3 * 2, HEIGHT - 30, WIDTH // 3 * 2, HEIGHT - 1)
+
+            display.set_pen(id_badge_config['text_color'])
+            
+            text = "Monica Ayhens-Madon"
+            text_width = display.measure_text(text, .8, 0)
+            display.text(text, (WIDTH - text_width) // 2, HEIGHT // 10 * 1, scale=.8)
+
+            
+            text = "Ubuntu Community Council"
+            text_width = display.measure_text(text, .6, 0)
+            display.text(text, (WIDTH - text_width) // 2, HEIGHT // 10 * 2, scale=.6)
+
+            display.set_pen(BLACK)
+            code = qrcode.QRCode()
+            code.set_text(id_badge_config['qrtext'])
+            
+            qr_width, qr_height = code.get_size()
+            draw_qr_code(WIDTH // 2 + 14, HEIGHT // 10 * 3 + 2, HEIGHT // 10 * 6, code)
+            
+            
+            display.set_pen(id_badge_config['text_color'])
+            
+            text = "Connect"
+            text_width = display.measure_text(text, .6, 0)
+            display.text(text, (text_width // 2), HEIGHT // 10 * 5, scale=.6)
+            
+            text = "  with  "
+            text_width = display.measure_text(text, .6, 0)
+            display.text(text, text_width // 2, HEIGHT // 10 * 6, scale=.6)
+            
+            text = "LinkedIn"
+            text_width = display.measure_text(text, .6, 0)
+            display.text(text, text_width // 2, HEIGHT // 10 * 7, scale=.6)
+            
+            
+            text = f"L: {getLightRead()}"
+            text_width = display.measure_text(text, .6, 0)
+            display.text(text, text_width // 2, HEIGHT - 15, scale=.6)
+            
+            if usb_power.value() == 1:
+                text = " USB "
             else:
-                id_badge_config['bg_color'] = 1
-        display.set_font(id_badge_config['font'])
-        if id_badge_config['bg_color'] == 1:
-            display.set_pen(UBUNTU_PURPLE)
-        else:
-            display.set_pen(CHELSEA_CUCUMBER_GREEN)
-        display.clear()
+                text = f"{round(vbat, 2)}v"
+            text_width = display.measure_text(text, .6, 0)
+            display.text(text, (WIDTH // 3) + (text_width // 2), HEIGHT - 15, scale=.6)
+            display.update()
         
-        # Border
-        display.set_pen(id_badge_config['line_color'])
-        display.line(0, 0, WIDTH, 0) # Top
-        display.line(0, 0, 0, HEIGHT) # Left
-        display.line(WIDTH - 1, 0, WIDTH - 1, HEIGHT - 1) # Right
-        display.line(0, HEIGHT - 1, WIDTH - 1, HEIGHT - 1) # Bottom
-        
-        # Name Square
-        display.line(0, HEIGHT // 10 * 3 + 1, WIDTH, HEIGHT // 10 * 3 + 1)
-        
-        # Connect/QR Border
-        display.line(WIDTH // 2, HEIGHT // 10 * 3 + 1, WIDTH // 2, HEIGHT - 30)
-        
-        # Stats Border
-        display.line(0, HEIGHT - 30, WIDTH - 1, HEIGHT - 30)
-        display.line(WIDTH // 3, HEIGHT - 30, WIDTH // 3, HEIGHT - 1)
-        display.line(WIDTH // 3 * 2, HEIGHT - 30, WIDTH // 3 * 2, HEIGHT - 1)
+        if mode == 1:
+            display.set_pen(UBUNTU_PURPLE if id_badge_config['bg_color'] == 1 else CHELSEA_CUCUMBER_GREEN)
+            display.clear()
+            display.set_pen(BLACK)
+            
+            code = qrcode.QRCode()
+            code.set_text(id_badge_config['qrtext'])
+            
+            size, module_size = measure_qr_code(HEIGHT, code)
+            left = int((WIDTH // 2) - (size // 2))
+            top = int((HEIGHT // 2) - (size // 2))
+            draw_qr_code(left, top, HEIGHT, code)
+            display.update()
 
-        display.set_pen(id_badge_config['text_color'])
-        
-        text = "Monica Ayhens-Madon"
-        text_width = display.measure_text(text, .8, 0)
-        display.text(text, (WIDTH - text_width) // 2, HEIGHT // 10 * 1, scale=.8)
-
-        
-        text = "Ubuntu Community Council"
-        text_width = display.measure_text(text, .6, 0)
-        display.text(text, (WIDTH - text_width) // 2, HEIGHT // 10 * 2, scale=.6)
-
-        display.set_pen(BLACK)
-        code = qrcode.QRCode()
-        code.set_text(id_badge_config['qrtext'])
-        
-        qr_width, qr_height = code.get_size()
-        draw_qr_code(WIDTH // 2 + 14, HEIGHT // 10 * 3 + 2, HEIGHT // 10 * 6, code)
-        
-        
-        display.set_pen(id_badge_config['text_color'])
-        
-        text = "Connect"
-        text_width = display.measure_text(text, .6, 0)
-        display.text(text, (text_width // 2), HEIGHT // 10 * 5, scale=.6)
-        
-        text = "  with  "
-        text_width = display.measure_text(text, .6, 0)
-        display.text(text, text_width // 2, HEIGHT // 10 * 6, scale=.6)
-        
-        text = "LinkedIn"
-        text_width = display.measure_text(text, .6, 0)
-        display.text(text, text_width // 2, HEIGHT // 10 * 7, scale=.6)
-        
-        
-        text = f"L: {getLightRead()}"
-        text_width = display.measure_text(text, .6, 0)
-        display.text(text, text_width // 2, HEIGHT - 15, scale=.6)
-        
-        if usb_power.value() == 1:
-            text = " USB "
-        else:
-            text = f"{round(vbat, 2)}v"
-        text_width = display.measure_text(text, .6, 0)
-        display.text(text, (WIDTH // 3) + (text_width // 2), HEIGHT - 15, scale=.6)
-        display.update()
         sleep(1)
+            
         
     if state == 1:
         if button_down.is_pressed:
@@ -218,7 +248,7 @@ while True:
         if button_boot.is_pressed:
             boot_press_count += 1
             if boot_press_count == 10:
-                with open('counter.json', 'w') as outfile:
+S                with open('counter.json', 'w') as outfile:
                     counter_data = [ 0, 0, 0, 0, 0, 0, 0, 0 ]
                     counter_string = ""
                     for i in range(0, len(counter_data)):
