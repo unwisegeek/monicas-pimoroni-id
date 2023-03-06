@@ -86,7 +86,7 @@ counter_keys = [
     'Kubuntu',
     'Lubuntu',
     'Budgie',
-    'Kylin',
+    'Unity',
     'MATE',
     'Studio',
     'Xubuntu',
@@ -100,6 +100,13 @@ id_badge_config = {
     'font': "serif",
     'qrtext':'https://www.linkedin.com/in/monica-ayhens-madon-42a63626',
 }
+
+voting_config = {
+    'bg_color': UBUNTU_PURPLE,
+    'text_color': WHITE,
+    'font': 'serif',
+    'line_color': WHITE,
+    }
 
 # Main Logic
 while True:
@@ -246,10 +253,10 @@ while True:
                         counter_string += f"{counter_data[i]}" if i == len(counter_data) - 1 else f"{counter_data[i]},"
                     outfile.write(counter_string)
                     print("Created file")
-        display.set_pen(BLUE)
+        display.set_pen(voting_config['bg_color'])
         display.clear()
         
-        display.set_pen(WHITE)
+        display.set_pen(voting_config['line_color'])
         
         # Draw Boxes
         display.line(0, 0, WIDTH, 0) # Top
@@ -266,6 +273,8 @@ while True:
         
         display.line(WIDTH - (WIDTH // 10 * 2), 0, WIDTH - ((WIDTH // 10) * 2), HEIGHT) # Right divider line
         
+        # Draw Text
+        display.set_pen(voting_config['text_color'])
         for i in range(0, len(counter_data)):
             text = str(counter_data[i])
             text_width = display.measure_text(text, .6, 0)
