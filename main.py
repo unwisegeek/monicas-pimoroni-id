@@ -122,7 +122,6 @@ while True:
         mode = 0
         
     if button_down.is_pressed:
-        print("Button push detected")
         if mode > 0:
             mode -= 1
         elif mode == 0:
@@ -235,20 +234,27 @@ while True:
             
         
     if state == 1:
+        options = [0, 1, 2, 3, 4, 5, 6, 7]
         if button_down.is_pressed:
-            if selection < 7:
-                selection += 1
-            else:
-                selection = 7
-        if button_up.is_pressed:
-            if selection > 1:
-                selection -= 1
-            else:
+            if selection == options[-1]:
                 selection = 0
+            elif selection > -1:
+                selection += 1
+            elif selection == -1:
+                selection = 0
+                
+        if button_up.is_pressed:
+            if selection == 0:
+                selection = options[-1]
+            elif selection > 0:
+                selection -= 1
+            elif selection == -1:
+                selection = options[-1]
+        print(selection)
         if button_boot.is_pressed:
             boot_press_count += 1
             if boot_press_count == 10:
-S                with open('counter.json', 'w') as outfile:
+                with open('counter.json', 'w') as outfile:
                     counter_data = [ 0, 0, 0, 0, 0, 0, 0, 0 ]
                     counter_string = ""
                     for i in range(0, len(counter_data)):
@@ -329,4 +335,3 @@ S                with open('counter.json', 'w') as outfile:
         sleep(.5)
     if state == 2:
         state = 0
-
