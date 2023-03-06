@@ -75,7 +75,7 @@ def draw_qr_code(ox, oy, size, code):
                 display.rectangle(ox + x * module_size, oy + y * module_size, module_size, module_size)
 
 # State Handler - Lol
-state = 1
+state = 0
 mode = 0     # 0 - ID Card, 1 - Light Sensor, 2 - Coming Soon
 selection = -1
 boot_press_count = 0
@@ -289,10 +289,5 @@ while True:
         display.update()
         sleep(.5)
     if state == 2:
-        infile = open('counter.json', 'r')
-        data = infile.read()
-        infile.close()
-        print(type(data))
-        print(data)
-        sleep(1)
+        state = 0
 
