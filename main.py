@@ -23,10 +23,21 @@ PINS_PICO_EXPLORER = {
     "scl": 21,
     } # i2c pins for pico explorer
 
-i2c = PimoroniI2C(**PINS_BREAKOUT_GARDEN)
-sgp30 = BreakoutSGP30(i2c)
-        
-sgp30.start_measurement(False)
+try:
+    i2c = PimoroniI2C(**PINS_BREAKOUT_GARDEN)
+    sgp30 = BreakoutSGP30(i2c)
+    sgp30.start_measurement(False)
+    def air_quality():
+        aq = sgp30.get_air_quality()
+        try:
+            a = aq[0]
+        except:
+            return (0, 0)
+        return sgp30.get_air_quality()
+except:
+    print("No CO2 Sensor found.")
+    def air_quality():
+        return (0, 0)
 
 # Configure Display
 display = PicoGraphics(display=DISPLAY_TUFTY_2040)
@@ -47,8 +58,10 @@ BLACK = display.create_pen(0, 0, 0)
 TEAL = display.create_pen(0, 255, 255)
 MAGENTA = display.create_pen(255, 0, 255)
 YELLOW = display.create_pen(255, 255, 0)
+ORANGE = display.create_pen(255, 88, 0)
 RED = display.create_pen(255, 0, 0)
 GREEN = display.create_pen(0, 255, 0)
+LIGHT_GREEN = display.create_pen(144, 238, 144)
 BLUE = display.create_pen(0, 0, 255)
 
 CHELSEA_CUCUMBER_GREEN = display.create_pen(136, 169, 91)
@@ -125,7 +138,9 @@ voting_config = {
     'font': 'serif',
     'line_color': WHITE,
     }
-
+  
+aq = 0
+  
 # Main Logic
 while True:
     if button_a.is_pressed:
@@ -162,7 +177,7 @@ while True:
             vref_en.value(0)
             
             # Get air quality reading
-            air_quality = sgp30.get_air_quality()
+            aq = air_quality()[0]
             
             if button_boot.is_pressed:
                 if id_badge_config['bg_color'] == 1:
@@ -236,8 +251,31 @@ while True:
             text_width = display.measure_text(text, .6, 0)
             display.text(text, (WIDTH // 3) + (text_width // 2), HEIGHT - 15, scale=.6)
             
-            print(air_quality[BreakoutSGP30.ECO2])
-            text = f"{str(air_quality[BreakoutSGP30.ECO2])}ppm"
+            co2_bg_color = UBUNTU_PURPLE if id_badge_config['bg_color'] == 1 else CHELSEA_CUCUMBER_GREEN
+            co2_txt_color = WHITE
+
+            if aq in range(200, 699):
+                co2_bg_color = GREEN
+                co2_txt_color = BLACK
+            if aq in range(700, 1099):
+                co2_bg_color = LIGHT_GREEN
+                co2_txt_color = BLACK
+            if aq in range(1100, 1599):
+                co2_bg_color = YELLOW
+                co2_txt_color = BLACK
+            if aq in range(1600, 2099):
+                co2_bg_color = ORANGE
+                co2_txt_color = BLACK
+            if aq > 2099:
+                co2_bg_color = RED
+                co2_txt_color = WHITE
+            if aq > 0:
+                text = f"{str(aq)}ppm"
+                display.set_pen(co2_bg_color)
+                display.rectangle(WIDTH // 3 * 2 + 1, HEIGHT - 29, WIDTH - 2, HEIGHT - 2)
+                display.set_pen(co2_txt_color)
+            else:
+                text = "INOP"
             text_width = display.measure_text(text, .6, 0)
             display.text(text, ((WIDTH // 3) * 2 - 20) + (text_width // 2), HEIGHT - 15, scale=.6)
             
